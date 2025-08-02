@@ -51,16 +51,16 @@ declare global {
 export const validateLokaliseToken = async (req: Request, res: Response, next: NextFunction) => {
   try {
     // ========================================================================
-    // TOKEN EXTRACTION FROM MULTIPLE SOURCES
+    // TOKEN EXTRACTION FROM MULTIPLE SOURCES (IN PRIORITY ORDER)
     // ========================================================================
-    // Frontend plugin primarily uses Authorization: Bearer {token} format
-    // Fallback options support different integration patterns and testing
+    // PRODUCTION: Builder.io plugin sends Authorization: Bearer {user-token}
+    // DEVELOPMENT: Environment variable used as fallback for testing
     const authHeader = req.headers.authorization;
-    const apiToken = req.headers['x-api-token'] as string ||              // Direct header
-                     req.headers['lokalise-api-token'] as string ||       // Alternative header
-                     (authHeader && authHeader.startsWith('Bearer ') ?    // Bearer token (primary)
+    const apiToken = (authHeader && authHeader.startsWith('Bearer ') ?    // 🥇 PRODUCTION: Plugin uses this
                        authHeader.slice(7) : null) ||
-                     process.env.LOKALISE_API_TOKEN;                      // Environment fallback
+                     req.headers['x-api-token'] as string ||              // 🥈 Alternative header format
+                     req.headers['lokalise-api-token'] as string ||       // 🥉 Another alternative format
+                     process.env.LOKALISE_API_TOKEN;                      // 🏅 DEVELOPMENT: Fallback only
 
     if (!apiToken) {
       return res.status(401).json({
@@ -85,14 +85,14 @@ export const validateLokaliseToken = async (req: Request, res: Response, next: N
     req.lokaliseClient = lokaliseClient;
 
     // ========================================================================
-    // PROJECT ID EXTRACTION AND ATTACHMENT
+    // PROJECT ID EXTRACTION AND ATTACHMENT (IN PRIORITY ORDER)
     // ========================================================================
-    // Extract project ID from URL parameters, request body, or query string
-    // Frontend plugin includes project ID in API calls for context
-    const projectId = req.params.projectId ||      // URL parameter (most common)
-                      req.body.projectId ||         // Request body
-                      req.query.projectId as string || // Query parameter
-                      process.env.LOKALISE_PROJECT_ID; // Environment fallback
+    // PRODUCTION: Plugin includes project ID in URL path /api/keys/{projectId}
+    // DEVELOPMENT: Environment variable used as fallback for testing
+    const projectId = req.params.projectId ||                // 🥇 PRODUCTION: Plugin uses URL path
+                      req.body.projectId ||                   // 🥈 Alternative: Request body
+                      req.query.projectId as string ||       // 🥉 Alternative: Query parameter
+                      process.env.LOKALISE_PROJECT_ID;       // 🏅 DEVELOPMENT: Fallback only
     
     if (projectId) {
       // IMPORTANT: German spelling "projektId" used intentionally throughout codebase
@@ -123,15 +123,15 @@ export const validateLokaliseToken = async (req: Request, res: Response, next: N
 
 export const requireProjectId = (req: Request, res: Response, next: NextFunction) => {
   // ========================================================================
-  // PROJECT ID EXTRACTION FROM MULTIPLE SOURCES
+  // PROJECT ID EXTRACTION FROM MULTIPLE SOURCES (IN PRIORITY ORDER)
   // ========================================================================
-  // Check URL parameters first (primary source from frontend plugin)
-  // Fallback to request body, query params, and previous middleware results
-  const projectId = req.params.projectId ||          // URL path parameter (primary)
-                    req.body.projectId ||             // Request body
-                    req.query.projektId as string ||  // Query parameter (note German spelling)
-                    req.projektId ||                  // Set by previous middleware
-                    process.env.LOKALISE_PROJECT_ID;  // Environment fallback
+  // PRODUCTION: Plugin sends project ID in URL path like /api/keys/{projectId}
+  // DEVELOPMENT: Fallback to environment variable for testing
+  const projectId = req.params.projectId ||          // 🥇 PRODUCTION: URL path (plugin uses this)
+                    req.body.projectId ||             // 🥈 Alternative: Request body
+                    req.query.projektId as string ||  // 🥉 Alternative: Query param (German spelling)
+                    req.projektId ||                  // 🏅 Previous middleware result
+                    process.env.LOKALISE_PROJECT_ID;  // 🏅 DEVELOPMENT: Fallback only
 
   if (!projectId) {
     return res.status(400).json({
