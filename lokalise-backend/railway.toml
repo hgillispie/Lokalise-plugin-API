@@ -1,0 +1,23 @@
+[build]
+builder = "NIXPACKS"
+
+[deploy]
+healthcheckPath = "/health"
+healthcheckTimeout = 300
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 10
+
+[[services]]
+serviceName = "lokalise-backend"
+
+[services.source]
+repo = "BuilderIO/lokalise-integration"
+rootDirectory = "/backend"
+
+[[services.variables]]
+name = "NODE_ENV"
+value = "production"
+
+[[services.variables]]
+name = "PORT"
+value = "3000"
