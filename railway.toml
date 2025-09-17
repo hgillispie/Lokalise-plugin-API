@@ -21,3 +21,7 @@ value = "production"
 [[services.variables]]
 name = "PORT"
 value = "3000"
+
+[[services.variables]]
+name = "ALLOWED_ORIGINS"
+value = "http://localhost:1234,https://builder.io,https://app.builder.io,http://localhost:8080"
